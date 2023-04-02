@@ -1,6 +1,7 @@
 // lipsurf-plugins/src/Kitsun/Kitsun.ts
 /// <reference types="lipsurf-types/extension"/>
 import { prefectureToRomaji, isPrefecturesDeck } from "./prefectures";
+import { katakanaToHiragana } from "./kana";
 
 declare const PluginBase: IPluginBase;
 
@@ -16,21 +17,6 @@ let observer: MutationObserver | null;
 
 // stores the actual answer we matched so it can be inputted by pageFn (inputAnswer)
 let matchedAnswer: string;
-
-// converts katakana characters in the string to hiragana. will be a no-op if no katakana
-function katakanaToHiragana(s: string): string {
-    const lower = "゠".codePointAt(0)!;
-    const upper = "ヿ".codePointAt(0)!;
-    const diff = "ア".codePointAt(0)! - "あ".codePointAt(0)!
-    return s.split("").map(c => {
-        const point = c.codePointAt(0)!;
-        if (point >= lower && point <= upper) {
-            return String.fromCodePoint(point - diff);
-        } else {
-            return c;
-        }
-    }).join("");
-}
 
 function punctuationToSpace(s: string): string {
     return s.replace(/[!"#$%&'()*+,-./:;<=>?@[\\\]^_`{|}~"]/," ");
@@ -55,6 +41,10 @@ function transformAnswers(raw: string): string[] {
         if (noPunct !== answer) {
             results.push(answer);
         }
+        // transcript is usually sent in hiragana:
+        results.push(katakanaToHiragana(answer));
+        // transcript sometimes returns choonpu (こーひー) sometimes extra vowel (こうひい)
+        results.push(katakanaToHiragana(answer, true));
     }
     return results;
 }
@@ -116,11 +106,11 @@ export function matchAnswer({preTs, normTs}: TsData): [number, number, any[]?]|u
             return [0, transcript.length, [answers[i]]];
         }
     }
-    matchedAnswer = "";
     return undefined;
 }
 
 function clickNext() {
+    currentState = FlashCardState.Flipping;
     const quizButtons=document.querySelectorAll('body > div.swal2-container.swal2-center.swal2-fade.swal2-shown > div > div.swal2-buttonswrapper > button.swal2-confirm.swal2-styled');
     if (quizButtons.length > 0) {
         (quizButtons.item(0) as HTMLElement).click();
@@ -146,6 +136,7 @@ function inputAnswer({preTs, normTs}: TsData) {
     const typeans = document.getElementById("typeans");
     if (typeans !== null) {
         (typeans as HTMLInputElement).value = matchedAnswer;
+        matchedAnswer = "";
         clickNext();
     } else {
         console.log("[Kitsun.inputAnswer] typeans was null");
@@ -218,10 +209,9 @@ function setLanguage(): boolean {
 }
 
 /**
- * Watches the page for changes to flip between languages for different cards
+ * Watches the page in order to set the language for each card
  */
 function mutationCallback(mutations, observer) {
-    console.log("[Kitsun.mutationCallback] " + FlashCardState[currentState]);
     if (currentState === FlashCardState.Flipping && document.location.href.match(activePages)) {
         if (setLanguage()) {
             currentState = FlashCardState.Flipped
@@ -231,13 +221,14 @@ function mutationCallback(mutations, observer) {
 
 function exitKitsunContext() {
     console.log("[Kitsun.exitKitsunContext]");
-    PluginBase.util.enterContext(["Normal"]);
+    console.log(observer);
     if (previousLanguage !== null) {
         PluginBase.util.setLanguage(previousLanguage);
     }
-    if (observer !== null) {
+    if (observer) {
         observer.disconnect();
     }
+    PluginBase.util.enterContext(["Normal"]);
 }
 
 function enterKitsunContext() {
@@ -328,10 +319,7 @@ export default <IPluginBase & IPlugin> {...PluginBase, ...{
             match: "next",
             context: "Kitsun Review",
             normal: false,
-            pageFn: () => {
-                currentState = FlashCardState.Flipping;
-                clickNext();
-            }
+            pageFn: clickNext
         }, {
             name: "Wrong",
             description: "Mark a card wrong",

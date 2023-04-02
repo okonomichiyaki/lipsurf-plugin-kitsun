@@ -1,14 +1,19 @@
 
-export function isPrefecturesDeck(): boolean {
-    const typeans = document.getElementById("typeans");
+export function isPrefecturesDeck() {
+    const typeans = document.getElementById('typeans') || document.querySelector('div.typeans');
     if (typeans === null) {
         return false;
     }
-    const placeholder = typeans.getAttribute("placeholder");
+    const placeholder = typeans.getAttribute('placeholder') || typeans.textContent;
     if (placeholder === null) {
         return false;
     }
-    if (placeholder === "Enter Prefecture Name ..." || placeholder.match(/Click on the.*Prefecture!/)) {
+    const res = [
+      /Click on a Prefecture in the .* Region!/,
+      /Enter (Region|Prefecture) Name .../,
+      /Click on the .* Prefecture!/
+    ];
+    if (res.some(re => placeholder.match(re))) {
         return true;
     }
     return false;
