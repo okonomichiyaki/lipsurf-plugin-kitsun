@@ -4,7 +4,7 @@ import { prefectureToRomaji, isPrefecturesDeck } from "./prefectures";
 
 declare const PluginBase: IPluginBase;
 
-const activePages: RegExp = /^https:\/\/kitsun\.io\/deck\/.*\/(reviews|lessons|selfstudy)$/;
+const activePages = /^https:\/\/kitsun\.io\/deck\/.*\/(reviews|lessons|selfstudy)$/;
 const FlashCardState: { Flipping: string, Flipped: string } = {
     "Flipping":"Flipping",
     "Flipped":"Flipped"
@@ -15,7 +15,7 @@ let previousLanguage: LanguageCode;
 let observer: MutationObserver | null;
 
 // stores the actual answer we matched so it can be inputted by pageFn (inputAnswer)
-var matchedAnswer: string;
+let matchedAnswer: string;
 
 // converts katakana characters in the string to hiragana. will be a no-op if no katakana
 function katakanaToHiragana(s: string): string {
@@ -33,7 +33,7 @@ function katakanaToHiragana(s: string): string {
 }
 
 function punctuationToSpace(s: string): string {
-    return s.replace(/[!"#$%&'()*+,-./:;<=>?@\[\\\]^_`{|}~"]/," ");
+    return s.replace(/[!"#$%&'()*+,-./:;<=>?@[\\\]^_`{|}~"]/," ");
 }
 
 /**
@@ -48,7 +48,7 @@ function transformAnswers(raw: string): string[] {
     const answers = noParens.split(",")
         .map(a => a.trim().toLowerCase())
         .filter(a => a.length != 0);
-    for (var i = 0; i < answers.length; i++) {
+    for (let i = 0; i < answers.length; i++) {
         const answer = answers[i];
         results.push(answer);
         const noPunct = punctuationToSpace(answer);
@@ -61,7 +61,7 @@ function transformAnswers(raw: string): string[] {
 
 function getAnswers() {
     // first try to get the answer from typeans property:
-    var results: string[] = [];
+    let results: string[] = [];
     const typeans = document.getElementById("typeans");
     if (typeans !== null) {
         const answers = typeans.getAttribute("answer");
@@ -103,9 +103,9 @@ function compareAnswer(answer: string, transcript: string) {
 
 export function matchAnswer({preTs, normTs}: TsData): [number, number, any[]?]|undefined|false {
     const answers = getAnswers();
-    let transcript = normTs.toLowerCase();
+    const transcript = normTs.toLowerCase();
     console.log("[Kitsun.matchAnswer] t=%s, a=%o",transcript,answers);
-    for (var i = 0; i < answers.length; i++) {
+    for (let i = 0; i < answers.length; i++) {
         const answer = katakanaToHiragana(answers[i]);
         // special case: current language is Japanese and answer is romaji, then maybe prefectures deck
         // so convert possible prefecture name to romaji and check that too
@@ -158,8 +158,7 @@ function inputAnswer({preTs, normTs}: TsData) {
  */
 function getLanguageFromQuest(): "en" | "ja" | null {
     const quests = document.getElementsByClassName("quest");
-    var found = false;
-    for (var i = 0; i < quests.length; i++) {
+    for (let i = 0; i < quests.length; i++) {
         const quest = quests[i];
         const trimmed = quest.innerHTML.trim();
         if (trimmed === "Vocabulary Meaning") {
@@ -201,7 +200,7 @@ function setLanguage(): boolean {
         PluginBase.util.setLanguage("ja");
         return true;
     }
-    var lang = getLanguageFromTypeans();
+    let lang = getLanguageFromTypeans();
     if (lang !== null) {
         console.log("[Kitsun.setLanguage] set to %s based on typeans (10k/user deck)", lang);
         PluginBase.util.setLanguage(lang);
@@ -288,8 +287,8 @@ export default <IPluginBase & IPlugin> {...PluginBase, ...{
             window.dispatchEvent(new Event('locationchange'));
             return ret;
         })(history.replaceState);`
-        var head = document.getElementsByTagName("head")[0];         
-        var script = document.createElement('script');
+        const head = document.getElementsByTagName("head")[0];
+        const script = document.createElement('script');
         script.type = 'text/javascript';
         script.innerHTML = src;
         head.appendChild(script);
